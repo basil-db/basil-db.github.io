@@ -141,7 +141,7 @@
         })
         .catch(error => console.error('Error loading the data:', error));
 
-    fetch('data/food_content.json')
+    fetch('data/data_merged.json')
         .then(response => response.json())
         .then(data => {
             displayFoodDetails(data, bioactive);
