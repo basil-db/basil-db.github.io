@@ -75,6 +75,7 @@
             text-align: center;
             font-size: 18px;
             font-weight: bold;
+            margin-left: -28px;
         }
 </style>
 </head>
@@ -111,10 +112,15 @@
             <tr>
                 <th>Compound</th>
                 <th>Weight</th>
+                <th>Natural</th>
             </tr>
         </thead>
         <tbody id="foodDetails"></tbody>
     </table>
+</div>
+
+    <div id="naturalNote" style="margin-top: 20px; font-style: italic; color: #555; display: none;">
+    Note: BASIL DB contains a small number of compounds that are not naturally occurring. These include compounds used as dietary supplements, those inspired by natural compounds or their mechanisms, and semi-synthetic derivatives.
 </div>
 
     <script>
@@ -177,46 +183,69 @@
 </script>
 <script>
     function populateRelatedCompounds(condition) {
-        fetch('data/weights_v1.json')
+    // Fetch the natural bioactives list
+        fetch('data/synthetic_compounds.json')
             .then(response => response.json())
-            .then(data => {
-                const tableBody = document.getElementById('foodDetails');
-                const relatedData = data
-                    .filter(item => item.Condition === condition)
-                    .map(item => ({
-                        ...item,
-                        // Parse and round weight to 3 decimals, ensuring it's a number
-                        Weight: item.Weight ? parseFloat(item.Weight).toFixed(3) : 'N/A'
-                    }))
-                    .sort((a, b) => parseFloat(b.Weight) - parseFloat(a.Weight)); // Sort descending by weight
+            .then(naturalBioactives => {
+                // Fetch the weights data
+                fetch('data/weights_v1.json')
+                    .then(response => response.json())
+                    .then(data => {
+                        const tableBody = document.getElementById('foodDetails');
+                        const relatedData = data
+                            .filter(item => item.Condition === condition)
+                            .map(item => ({
+                                ...item,
+                                // Parse and round weight to 3 decimals, ensuring it's a number
+                                Weight: item.Weight ? parseFloat(item.Weight).toFixed(3) : 'N/A'
+                            }))
+                            .sort((a, b) => parseFloat(b.Weight) - parseFloat(a.Weight)); // Sort descending by weight
 
-                if (relatedData.length > 0) {
-                    relatedData.forEach(item => {
-                        const row = tableBody.insertRow();
+                        if (relatedData.length > 0) {
+                            let isAnyNatural = false; // Flag to check if any compound is natural
 
-                        // Create the cell for the bioactive name
-                        const bioactiveCell = row.insertCell(0);
+                            relatedData.forEach(item => {
+                                const row = tableBody.insertRow();
 
-                        // Create a hyperlink that points to the bioactive details page
-                        const link = document.createElement('a');
-                        link.href = `details.html?bioactive=${encodeURIComponent(item.Bioactive)}`;
-                        link.textContent = item.Bioactive || 'N/A';
-                        link.style.textDecoration = "none"; // Optional: style for the link
+                                // Create the cell for the bioactive name
+                                const bioactiveCell = row.insertCell(0);
 
-                        // Append the link to the cell
-                        bioactiveCell.appendChild(link);
+                                // Create a hyperlink that points to the bioactive details page
+                                const link = document.createElement('a');
+                                link.href = `details.html?bioactive=${encodeURIComponent(item.Bioactive)}`;
+                                link.textContent = item.Bioactive || 'N/A';
+                                link.style.textDecoration = "none"; // Optional: style for the link
 
-                        // Set up the second cell for the weight
-                        row.insertCell(1).textContent = item.Weight || 'N/A';
-                    });
-                } else {
-                    const row = tableBody.insertRow();
-                    const cell = row.insertCell(0);
-                    cell.textContent = 'No related compounds found for this condition.';
-                    cell.colSpan = 2;
-                }
+                                // Append the link to the cell
+                                bioactiveCell.appendChild(link);
+
+                                // Set up the second cell for the weight
+                                row.insertCell(1).textContent = item.Weight || 'N/A';
+
+                                // Set up the third cell for "Natural" status
+                                const isNatural = naturalBioactives.includes(item.Bioactive);
+                                row.insertCell(2).textContent = isNatural ? "No" : "Yes";
+
+                                // If any compound is natural, set the flag to true
+                                if (isNatural) {
+                                    isAnyNatural = true;
+                                }
+                            });
+
+                            // Display the note if any compound is natural
+                            if (isAnyNatural) {
+                                document.getElementById('naturalNote').style.display = 'block';
+                            }
+                        } else {
+                            const row = tableBody.insertRow();
+                            const cell = row.insertCell(0);
+                            cell.textContent = 'No related compounds found for this condition.';
+                            cell.colSpan = 3; // Updated colspan to include the new column
+                        }
+                    })
+                    .catch(error => console.error('Error loading weights data:', error));
             })
-            .catch(error => console.error('Error loading related compounds:', error));
+            .catch(error => console.error('Error loading natural bioactives list:', error));
     }
 
     // Update window.onload to include populating related compounds

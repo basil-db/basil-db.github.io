@@ -75,6 +75,7 @@
             text-align: center;
             font-size: 18px;
             font-weight: bold;
+            margin-left: -28px;
         }
 </style>
 </head>
@@ -105,57 +106,71 @@
     </div>
 
     <script>
+    // Array of JSON file paths
+    const jsonFiles = [
+        'data/other_chunk_0.json',
+        'data/other_chunk_1.json',
+        'data/other_chunk_2.json',
+        'data/other_chunk_3.json',
+        'data/other_chunk_4.json'
+    ];
+
     function displayConditionDetails() {
         const urlParams = new URLSearchParams(window.location.search);
         const condition = urlParams.get('other');
 
-        document.title = condition + " - Concept Details"; // Sets the browser tab title
+        document.title = condition + " - Concept Details";
         document.getElementById('conditionTitle').textContent = condition + " - Concept Details";
 
-        fetch('data/bioactives_single_condition_non_condition.json')
-            .then(response => response.json())
-            .then(data => {
-                const conditionData = data.filter(item => item.Condition === condition);
-                if (conditionData.length > 0) {
-                    const firstEntry = conditionData[0]; // Assuming all entries have the same UMLS Code and SemTypes
-                    document.getElementById('umlsCode').textContent = firstEntry['UMLS Code'] || 'N/A';
-                    document.getElementById('semTypes').textContent = firstEntry['SemTypes'] || 'N/A';
-                    document.getElementById('paperCount').textContent = conditionData.length;
-                }
-                populateTable(conditionData);
-            })
-            .catch(error => console.error('Error loading the data:', error));
+        let allData = [];
+
+        Promise.all(jsonFiles.map(file =>
+            fetch(file).then(response => response.json())
+        )).then(dataArrays => {
+            dataArrays.forEach(data => {
+                allData = allData.concat(data);
+            });
+
+            const conditionData = allData.filter(item => item.Condition === condition);
+            if (conditionData.length > 0) {
+                const firstEntry = conditionData[0];
+                document.getElementById('umlsCode').textContent = firstEntry['UMLS Code'] || 'N/A';
+                document.getElementById('semTypes').textContent = firstEntry['SemTypes'] || 'N/A';
+                document.getElementById('paperCount').textContent = conditionData.length;
+            }
+            populateTable(conditionData);
+        })
+        .catch(error => console.error('Error loading the data:', error));
     }
 
     function populateTable(data) {
         const tableBody = document.getElementById('conditionDetails');
+        tableBody.innerHTML = ''; // Clear previous entries
         if (data.length > 0) {
             data.forEach(item => {
                 const row = tableBody.insertRow();
                 const pmidCell = row.insertCell(0);
-                // Create a clickable link for the PMID
                 const pmidLink = document.createElement('a');
                 pmidLink.href = `https://pubmed.ncbi.nlm.nih.gov/${item.PMID}`;
                 pmidLink.textContent = item.PMID;
-                pmidLink.target = "_blank";  // Open in a new tab
+                pmidLink.target = "_blank";
                 pmidCell.appendChild(pmidLink);
                 row.insertCell(1).textContent = item.Bioactive;
                 row.insertCell(2).textContent = item['Effect Source'];
                 row.insertCell(3).textContent = item['Health Effects'];
                 row.insertCell(4).textContent = item.Population;
-                row.insertCell(5).textContent = item.population || 'N/A';
-                row.insertCell(6).textContent = item.bias.toFixed(3);
+                row.insertCell(5).textContent = item.participants || 'N/A';
+                row.insertCell(6).textContent = item.bias ? item.bias.toFixed(3) : 'N/A';
             });
         } else {
             const row = tableBody.insertRow();
             const cell = row.insertCell(0);
             cell.textContent = 'No details found for this condition.';
-            cell.colSpan = 6;
+            cell.colSpan = 7;
         }
     }
 
     window.onload = displayConditionDetails;
-</script>
-
+    </script>
 </body>
 </html>

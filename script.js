@@ -16,10 +16,23 @@ fetch('data/data_merged.json')
     .then(data => foodData = data)
     .catch(error => console.error('Error loading condition data:', error));
 
-fetch('data/bioactives_single_condition_non_condition.json')
-    .then(response => response.json())
-    .then(data => otherData = data)
-    .catch(error => console.error('Error loading condition data:', error));
+const jsonFiles = [
+        'data/other_chunk_0.json',
+        'data/other_chunk_1.json',
+        'data/other_chunk_2.json',
+        'data/other_chunk_3.json',
+        'data/other_chunk_4.json'
+    ];
+
+let otherData = [];
+
+Promise.all(jsonFiles.map(file =>
+    fetch(file).then(response => response.json())
+))
+.then(dataArrays => {
+    otherData = dataArrays.flat();  // Combine all chunks into a single array
+})
+.catch(error => console.error('Error loading condition data:', error));
 
 document.getElementById('searchInput').addEventListener('input', function() {
     showRecommendations(this.value);
