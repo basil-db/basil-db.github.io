@@ -100,6 +100,7 @@
                     <th>Other Compounds</th>
                     <th>Participants</th>
                     <th>Study Bias</th>
+                    <th>Dosage</th>
                 </tr>
             </thead>
             <tbody id="bioactiveDetails"></tbody>
@@ -123,6 +124,8 @@
 </div>
 
     <script>
+        let dosageData = {}; // Global variable to store dosage information
+
         function getBioactiveData() {
     const urlParams = new URLSearchParams(window.location.search);
     const bioactive = urlParams.get('bioactive');
@@ -130,7 +133,24 @@
     document.title = bioactive + " Details"; // Sets the browser tab title
     document.getElementById('bioactiveTitle').textContent = "Compound 🌿: " + bioactive; // Set the title to the searched bioactive
 
-    fetch('data/bioactive_data.json')
+    // First, load the dosage information
+    fetch('data/dosage_information.json')
+        .then(response => response.json())
+        .then(data => {
+            // Convert dosage data to a lookup object for easy access
+            // Key format: "PMID_Bioactive"
+            dosageData = {};
+            data.forEach(item => {
+                const pmid = item[0];
+                const bioactiveName = item[1];
+                const dosage = item[2];
+                const key = `${pmid}_${bioactiveName}`;
+                dosageData[key] = dosage;
+            });
+            
+            // Now load and display bioactive details
+            return fetch('data/bioactive_data.json');
+        })
         .then(response => response.json())
         .then(data => {
             displayBioactiveDetails(data, bioactive);
@@ -158,6 +178,11 @@
         .catch(error => console.error('Error loading the natural bioactives list:', error));
 }
 
+function getDosage(pmid, bioactive) {
+    const key = `${pmid}_${bioactive}`;
+    return dosageData[key] || ''; // Return dosage if found, empty string if not
+}
+
 function displayBioactiveDetails(data, bioactive) {
     const detailsBody = document.getElementById('bioactiveDetails');
     const bioactiveData = data.filter(item => item.Bioactive === bioactive);
@@ -177,11 +202,15 @@ function displayBioactiveDetails(data, bioactive) {
             row.insertCell(4).textContent = item['Other Compounds'];
             row.insertCell(5).textContent = item.population ? item.population.toString() : 'N/A'; // Handle null
             row.insertCell(6).textContent = item.bias.toFixed(3); // Format floating-point precision
+            
+            // Add dosage information
+            const dosage = getDosage(item.PMID, bioactive);
+            row.insertCell(7).textContent = dosage;
         });
     } else {
         const row = detailsBody.insertRow();
         row.insertCell(0).textContent = 'No details found for this bioactive.';
-        row.cells[0].colSpan = 8;
+        row.cells[0].colSpan = 8; // Updated colspan to account for new dosage column
     }
 }
 
